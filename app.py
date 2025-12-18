@@ -8,106 +8,64 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-import sys
+import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from src. eda import EDAAnalyzer
 from src.preprocessing import DataPreprocessor
 from src.model import MLModel
 
-# Page Config
 st.set_page_config(page_title="Air Quality Analysis", page_icon="🌬️", layout="wide")
 
-# Load Data
 @st.cache_data
 def load_data():
-    paths = ['data/Air_Quality. csv', 'data/air_quality. csv', 'Air_Quality.csv']
-    for path in paths:
+    for path in ['data/Air_Quality. csv', 'data/air_quality. csv', 'Air_Quality.csv']:
         if os.path.exists(path):
-            try:
-                return pd.read_csv(path)
-            except: 
-                continue
+            try:  return pd.read_csv(path)
+            except: continue
     st.error("❌ Could not find Air_Quality.csv")
     return None
 
 df = load_data()
-
-# Sidebar Navigation
 st.sidebar.title("🌬️ Air Quality Analysis")
 page = st.sidebar.radio("Navigate", ["Introduction", "EDA", "Preprocessing", "ML Model", "Conclusion"])
 
-# Helper Functions
-def display_metrics(data_dict):
-    """Display metrics in columns"""
-    cols = st.columns(len(data_dict))
-    for i, (key, val) in enumerate(data_dict. items()):
-        cols[i].metric(key, val)
+def metrics(d): 
+    cols = st.columns(len(d))
+    for i, (k, v) in enumerate(d.items()): cols[i].metric(k, v)
 
-def find_city_column(df):
-    """Find the city/location column"""
-    for col in df.select_dtypes(include=['object']).columns:
-        if 2 <= df[col].nunique() <= 50:
-            return col
-    return None
-
-def plot_figure(plot_func, figsize=(10, 5), **kwargs):
-    """Wrapper for matplotlib plots"""
-    fig, ax = plt.subplots(figsize=figsize)
-    plot_func(ax, **kwargs)
+def plot(func, size=(10, 5)):
+    fig, ax = plt.subplots(figsize=size)
+    func(ax)
     plt.tight_layout()
     st.pyplot(fig)
 
 # ===================== INTRODUCTION =====================
 if page == "Introduction":
     st.title("🌬️ Air Quality Analysis & Prediction")
-    st.markdown("---")
-    
-    st.markdown("""
-    ### 📌 Project Overview
-    Analyze air quality data, understand pollution patterns, and build ML models. 
-    
-    ### 🎯 Objectives
-    - **15 EDA analyses** | Preprocessing pipeline | ML models | Runtime predictions
-    """)
+    st.markdown("### 📌 Overview\nComprehensive EDA, Preprocessing, ML Models, and Predictions\n\n### 🎯 Features\n✅ 15 EDA analyses | ✅ Preprocessing | ✅ ML models | ✅ Runtime predictions")
     
     if df is not None:
-        st. markdown("### 📊 Dataset Overview")
-        display_metrics({
-            "Rows": len(df),
-            "Columns": len(df.columns),
-            "Numeric": len(df.select_dtypes(include=[np.number]).columns),
-            "Categorical": len(df. select_dtypes(include=['object']).columns)
-        })
+        st.markdown("### 📊 Dataset")
+        metrics({"Rows": len(df), "Columns": len(df.columns), "Numeric": len(df.select_dtypes(include=[np.number]).columns), "Categorical": len(df. select_dtypes(include=['object']).columns)})
         
-        city_col = find_city_column(df)
+        city_col = next((c for c in df.select_dtypes(include=['object']).columns if 2 <= df[c].nunique() <= 50), None)
         
         if city_col:
-            st.markdown(f"### 🌍 Data by {city_col}")
+            st.markdown(f"### 🌍 {city_col} Data")
             cities = df[city_col].unique()
-            
             col1, col2 = st. columns([2, 1])
-            with col1:
-                selected = st.multiselect(f"Select {city_col}(s)", cities.tolist(), 
-                                         default=cities[: 3]. tolist() if len(cities) >= 3 else cities. tolist())
-            with col2:
-                rows_option = st.selectbox("Rows", ["Sample (10/city)", "50", "100", "All"])
+            selected = col1.multiselect(f"Select {city_col}", cities. tolist(), default=cities[:3]. tolist() if len(cities) >= 3 else cities. tolist())
+            rows_opt = col2.selectbox("Rows", ["Sample (10/city)", "50", "100", "All"])
             
-            if selected:
-                filtered_df = df[df[city_col].isin(selected)]
-                st.write(f"**{len(filtered_df):,} records from {len(selected)} location(s)**")
-                
-                # Display logic
-                row_map = {"Sample (10/city)": pd.concat([filtered_df[filtered_df[city_col]==c].head(10) for c in selected]),
-                          "50": filtered_df. head(50), "100": filtered_df.head(100), "All": filtered_df}
-                st.dataframe(row_map[rows_option], height=400)
-                
+            if selected: 
+                fdf = df[df[city_col].isin(selected)]
+                st.write(f"**{len(fdf):,} records from {len(selected)} location(s)**")
+                display_df = pd.concat([fdf[fdf[city_col]==c]. head(10) for c in selected]) if rows_opt == "Sample (10/city)" else fdf.head(50 if rows_opt == "50" else 100 if rows_opt == "100" else len(fdf))
+                st.dataframe(display_df, height=400)
                 st.markdown("#### 📈 Records per Location")
-                st.bar_chart(filtered_df[city_col].value_counts())
+                st.bar_chart(fdf[city_col].value_counts())
         else:
-            st.markdown("### 🔍 Data Preview")
             st.dataframe(df.head(20))
 
 # ===================== EDA =====================
@@ -117,152 +75,86 @@ elif page == "EDA":
     
     if df is not None:
         eda = EDAAnalyzer(df)
-        
-        analysis = st.selectbox("Select Analysis", [
-            f"{i+1}. {name}" for i, name in enumerate([
-                "Summary Statistics", "Missing Values", "Data Types & Unique Values",
-                "Correlation Matrix", "Top Correlations", "Outlier Detection",
-                "Distribution Analysis", "Categorical Analysis", "Grouped Aggregation",
-                "Value Ranges", "Zero/Negative Analysis", "Duplicate Analysis",
-                "Quartile Analysis", "Variability Analysis", "Visualizations"
-            ])
-        ])
-        
+        analysis = st.selectbox("Select Analysis", [f"{i+1}. {n}" for i, n in enumerate(["Summary Statistics", "Missing Values", "Data Types", "Correlation Matrix", "Top Correlations", "Outlier Detection", "Distribution", "Categorical", "Grouped Stats", "Value Ranges", "Zero/Negative", "Duplicates", "Quartiles", "Variability", "Visualizations"])])
         st.markdown("---")
+        num = analysis.split(". ")[0]
         
-        # Analysis mapping
-        analysis_map = {
-            "1":  lambda:  st.dataframe(eda.summary_statistics()),
-            "2": lambda: display_missing_values(eda),
-            "3": lambda: st.dataframe(eda.data_types_info()),
-            "4": lambda:  plot_correlation(eda),
-            "5": lambda: st.dataframe(eda.top_correlations()),
-            "6": lambda: display_outliers(eda, df),
-            "7": lambda:  display_distributions(eda, df),
-            "8": lambda: display_categorical(eda, df),
-            "9": lambda: display_grouped(eda),
-            "10": lambda: st.dataframe(eda.value_ranges()),
-            "11": lambda: st.dataframe(eda.zero_negative_analysis()),
-            "12": lambda: display_metrics(eda.duplicate_analysis()),
-            "13": lambda: st.dataframe(eda.quartile_analysis()),
-            "14": lambda: st.dataframe(eda.variability_analysis()),
-            "15": lambda: display_visualizations(eda, df)
-        }
-        
-        analysis_num = analysis. split(". ")[0]
-        analysis_map[analysis_num]()
-
-# Helper functions for EDA
-def display_missing_values(eda):
-    missing = eda.missing_values()
-    if missing.empty:
-        st.success("No missing values!")
-    else:
-        st. dataframe(missing)
-        plot_figure(lambda ax: missing['Missing Count'].plot(kind='bar', ax=ax, color='coral'))
-
-def plot_correlation(eda):
-    corr = eda.correlation_matrix()
-    if not corr.empty:
-        plot_figure(lambda ax: sns.heatmap(corr, annot=True, cmap='coolwarm', center=0, ax=ax, fmt='.2f'), 
-                   figsize=(12, 8))
-    else:
-        st.warning("Not enough numeric columns")
-
-def display_outliers(eda, df):
-    outliers = eda.detect_outliers()
-    st.dataframe(outliers) if not outliers.empty else st.success("No outliers detected!")
-    
-    cols = st.multiselect("Box plot columns", eda.numeric_cols, default=eda.numeric_cols[: 3])
-    if cols:
-        plot_figure(lambda ax:  df[cols].boxplot(ax=ax), figsize=(12, 5))
-
-def display_distributions(eda, df):
-    st.dataframe(eda.distribution_analysis())
-    if eda.numeric_cols:
-        col = st.selectbox("Select column", eda.numeric_cols)
-        plot_figure(lambda ax: df[col].hist(bins=30, ax=ax, color='steelblue', edgecolor='black'))
-
-def display_categorical(eda, df):
-    if eda.categorical_cols:
-        col = st.selectbox("Select categorical", eda.categorical_cols)
-        cat_data = eda.categorical_analysis(col)
-        st.dataframe(cat_data)
-        plot_figure(lambda ax: cat_data['Count'].head(10).plot(kind='bar', ax=ax, color='teal'))
-    else:
-        st.warning("No categorical columns")
-
-def display_grouped(eda):
-    if eda.categorical_cols and eda.numeric_cols:
-        group_col = st.selectbox("Group by", eda.categorical_cols)
-        value_col = st.selectbox("Aggregate", eda.numeric_cols)
-        st.dataframe(eda.grouped_stats(group_col, value_col))
-    else:
-        st.warning("Need both categorical and numeric columns")
-
-def display_visualizations(eda, df):
-    viz_type = st.selectbox("Visualization", ["Histogram", "Scatter Plot", "Box Plot", "Pair Plot"])
-    
-    if viz_type == "Histogram":
-        col = st.selectbox("Column", eda.numeric_cols)
-        plot_figure(lambda ax: df[col].hist(bins=30, ax=ax, color='steelblue', edgecolor='black'))
-    
-    elif viz_type == "Scatter Plot": 
-        x = st.selectbox("X-axis", eda.numeric_cols, index=0)
-        y = st.selectbox("Y-axis", eda.numeric_cols, index=min(1, len(eda.numeric_cols)-1))
-        plot_figure(lambda ax: ax.scatter(df[x], df[y], alpha=0.5), figsize=(10, 6))
-    
-    elif viz_type == "Box Plot":
-        cols = st.multiselect("Columns", eda.numeric_cols, default=eda.numeric_cols[:3])
-        if cols:
-            plot_figure(lambda ax: df[cols].boxplot(ax=ax), figsize=(12, 5))
-    
-    elif viz_type == "Pair Plot":
-        cols = st.multiselect("Columns (max 4)", eda.numeric_cols[: 4], default=eda.numeric_cols[:3])
-        if len(cols) >= 2:
-            fig = sns.pairplot(df[cols]. dropna())
-            st.pyplot(fig)
+        if num == "1":  st.dataframe(eda.summary_statistics())
+        elif num == "2": 
+            miss = eda.missing_values()
+            st.dataframe(miss) if not miss.empty else st.success("No missing values!")
+            if not miss.empty: plot(lambda ax: miss['Missing Count'].plot(kind='bar', ax=ax, color='coral'))
+        elif num == "3":  st.dataframe(eda. data_types_info())
+        elif num == "4": 
+            corr = eda. correlation_matrix()
+            plot(lambda ax: sns.heatmap(corr, annot=True, cmap='coolwarm', center=0, ax=ax, fmt='.2f'), size=(12, 8)) if not corr.empty else st.warning("Not enough numeric columns")
+        elif num == "5":  st.dataframe(eda. top_correlations())
+        elif num == "6": 
+            out = eda.detect_outliers()
+            st.dataframe(out) if not out.empty else st.success("No outliers!")
+            cols = st.multiselect("Box plot", eda.numeric_cols, default=eda.numeric_cols[: 3])
+            if cols: plot(lambda ax: df[cols].boxplot(ax=ax), size=(12, 5))
+        elif num == "7": 
+            st.dataframe(eda.distribution_analysis())
+            if eda.numeric_cols:
+                col = st.selectbox("Column", eda.numeric_cols)
+                plot(lambda ax: df[col].hist(bins=30, ax=ax, color='steelblue', edgecolor='black'))
+        elif num == "8": 
+            if eda.categorical_cols:
+                col = st.selectbox("Categorical", eda.categorical_cols)
+                cat = eda.categorical_analysis(col)
+                st.dataframe(cat)
+                plot(lambda ax: cat['Count'].head(10).plot(kind='bar', ax=ax, color='teal'))
+            else:  st.warning("No categorical columns")
+        elif num == "9": 
+            if eda.categorical_cols and eda.numeric_cols:
+                st.dataframe(eda.grouped_stats(st.selectbox("Group by", eda.categorical_cols), st.selectbox("Aggregate", eda.numeric_cols)))
+            else: st.warning("Need categorical and numeric columns")
+        elif num == "10": st.dataframe(eda.value_ranges())
+        elif num == "11":  st.dataframe(eda. zero_negative_analysis())
+        elif num == "12": metrics(eda.duplicate_analysis())
+        elif num == "13": st.dataframe(eda.quartile_analysis())
+        elif num == "14": st.dataframe(eda.variability_analysis())
+        elif num == "15": 
+            viz = st.selectbox("Type", ["Histogram", "Scatter", "Box", "Pair"])
+            if viz == "Histogram": 
+                col = st.selectbox("Column", eda.numeric_cols)
+                plot(lambda ax: df[col].hist(bins=30, ax=ax, color='steelblue', edgecolor='black'))
+            elif viz == "Scatter":
+                x, y = st.selectbox("X", eda.numeric_cols, index=0), st.selectbox("Y", eda.numeric_cols, index=min(1, len(eda.numeric_cols)-1))
+                plot(lambda ax: [ax.scatter(df[x], df[y], alpha=0.5), ax.set_xlabel(x), ax.set_ylabel(y)], size=(10, 6))
+            elif viz == "Box":
+                cols = st.multiselect("Columns", eda.numeric_cols, default=eda.numeric_cols[: 3])
+                if cols:  plot(lambda ax: df[cols].boxplot(ax=ax), size=(12, 5))
+            elif viz == "Pair": 
+                cols = st.multiselect("Columns (max 4)", eda.numeric_cols[: 4], default=eda.numeric_cols[:3])
+                if len(cols) >= 2: st.pyplot(sns.pairplot(df[cols]. dropna()))
 
 # ===================== PREPROCESSING =====================
-elif page == "Preprocessing":
+elif page == "Preprocessing": 
     st.title("🔧 Data Preprocessing")
     st.markdown("---")
     
-    if df is not None:
-        st.subheader("Options")
-        
+    if df is not None: 
         col1, col2 = st. columns(2)
-        with col1:
-            missing_strategy = st.selectbox("Missing Values", ["median", "mean", "most_frequent"])
-            encoding_method = st.selectbox("Encoding", ["label", "onehot"])
-        with col2:
-            scaling_method = st.selectbox("Scaling", ["standard", "minmax"])
-            outlier_method = st.selectbox("Outliers", ["clip", "remove", "none"])
+        miss_strat = col1.selectbox("Missing", ["median", "mean", "most_frequent"])
+        encode = col1.selectbox("Encoding", ["label", "onehot"])
+        scale = col2.selectbox("Scaling", ["standard", "minmax"])
+        outlier = col2.selectbox("Outliers", ["clip", "remove", "none"])
         
         if st.button("Apply Preprocessing", type="primary"):
-            preprocessor = DataPreprocessor(df)
-            preprocessor.handle_missing(numeric_strategy=missing_strategy)
-            preprocessor.encode_categorical(method=encoding_method)
-            if outlier_method != 'none':
-                preprocessor. handle_outliers(method=outlier_method)
-            preprocessor.scale_features(method=scaling_method)
+            prep = DataPreprocessor(df)
+            prep.handle_missing(numeric_strategy=miss_strat)
+            prep.encode_categorical(method=encode)
+            if outlier != 'none':  prep.handle_outliers(method=outlier)
+            prep.scale_features(method=scale)
             
-            st.session_state['processed_df'] = preprocessor.df
-            st.session_state['preprocessor'] = preprocessor
-            
+            st.session_state. update({'processed_df': prep.df, 'preprocessor': prep})
             st.success("✅ Preprocessing completed!")
             
-            st.subheader("Steps Applied")
-            for i, step in enumerate(preprocessor.get_summary(), 1):
-                st.write(f"{i}. {step}")
-            
-            st.subheader("Preview")
-            st.dataframe(preprocessor.df.head())
-            
-            display_metrics({
-                "Original":  f"{df.shape[0]} × {df.shape[1]}",
-                "Processed": f"{preprocessor.df.shape[0]} × {preprocessor.df. shape[1]}"
-            })
+            for i, step in enumerate(prep.get_summary(), 1): st.write(f"{i}. {step}")
+            st.dataframe(prep.df. head())
+            metrics({"Original": f"{df.shape[0]}×{df.shape[1]}", "Processed": f"{prep. df.shape[0]}×{prep.df.shape[1]}"})
 
 # ===================== ML MODEL =====================
 elif page == "ML Model":
@@ -270,79 +162,61 @@ elif page == "ML Model":
     st.markdown("---")
     
     if df is not None:
-        work_df = st.session_state.get('processed_df', df. copy())
-        numeric_cols = work_df.select_dtypes(include=[np. number]).columns.tolist()
+        wdf = st.session_state. get('processed_df', df. copy())
+        ncols = wdf.select_dtypes(include=[np.number]).columns.tolist()
         
-        if len(numeric_cols) < 2:
-            st.error("Need at least 2 numeric columns")
+        if len(ncols) < 2:
+            st.error("Need 2+ numeric columns")
         else:
-            st.subheader("Configuration")
-            
             col1, col2 = st. columns(2)
-            with col1:
-                target_col = st.selectbox("Target Variable", numeric_cols)
-                model_type = st.selectbox("Type", ["regression", "classification"])
-            with col2:
-                test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-                models = ["Random Forest Regressor", "Linear Regression"] if model_type == "regression" else ["Random Forest Classifier", "Logistic Regression"]
-                model_name = st.selectbox("Model", models)
+            target = col1.selectbox("Target", ncols)
+            mtype = col1.selectbox("Type", ["regression", "classification"])
+            tsize = col2.slider("Test Size", 0.1, 0.4, 0.2)
+            mname = col2.selectbox("Model", ["Random Forest Regressor", "Linear Regression"] if mtype == "regression" else ["Random Forest Classifier", "Logistic Regression"])
             
             if st.button("Train Model", type="primary"):
                 from sklearn.model_selection import train_test_split
                 
-                feature_cols = [c for c in numeric_cols if c != target_col]
-                X = work_df[feature_cols]. dropna()
-                y = work_df. loc[X.index, target_col]
+                fcols = [c for c in ncols if c != target]
+                X = wdf[fcols]. dropna()
+                y = wdf. loc[X. index, target]
+                if mtype == "classification":  y = pd.cut(y, bins=3, labels=[0, 1, 2]).astype(int)
                 
-                if model_type == "classification":
-                    y = pd.cut(y, bins=3, labels=[0, 1, 2]).astype(int)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tsize, random_state=42)
                 
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+                ml = MLModel(model_type=mtype)
+                ml.train(X_train, y_train, model_name=mname)
+                mets, preds = ml.evaluate(X_test, y_test)
                 
-                ml_model = MLModel(model_type=model_type)
-                ml_model.train(X_train, y_train, model_name=model_name)
-                metrics, predictions = ml_model.evaluate(X_test, y_test)
-                
-                # Store in session
-                st.session_state. update({'ml_model': ml_model, 'feature_cols': feature_cols, 
-                                        'X_test': X_test, 'y_test': y_test})
+                st.session_state.update({'ml_model': ml, 'feature_cols': fcols, 'X_test': X_test, 'y_test': y_test})
                 
                 st.success("✅ Model trained!")
+                metrics(mets)
                 
-                st.subheader("Performance")
-                display_metrics(metrics)
+                imp = ml.get_feature_importance()
+                if imp is not None:  
+                    st.subheader("Feature Importance")
+                    plot(lambda ax: imp.head(10).plot(kind='barh', x='Feature', y='Importance', ax=ax, color='steelblue'), size=(10, 6))
                 
-                # Feature importance
-                importance = ml_model.get_feature_importance()
-                if importance is not None:
-                    st. subheader("Feature Importance")
-                    plot_figure(lambda ax: importance. head(10).plot(kind='barh', x='Feature', y='Importance', ax=ax, color='steelblue'), figsize=(10, 6))
-                
-                # Actual vs Predicted
                 st.subheader("Actual vs Predicted")
-                plot_figure(lambda ax: [ax.scatter(y_test, predictions, alpha=0.5), 
-                           ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')], figsize=(10, 6))
+                plot(lambda ax: [ax.scatter(y_test, preds, alpha=0.5), ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--'), ax.set_xlabel("Actual"), ax.set_ylabel("Predicted")], size=(10, 6))
             
             st.markdown("---")
             st.subheader("🔮 Make Predictions")
             
             if 'ml_model' in st. session_state:
-                ml_model = st.session_state['ml_model']
-                feature_cols = st.session_state['feature_cols']
+                ml = st.session_state['ml_model']
+                fcols = st.session_state['feature_cols']
                 
-                st.write("Enter values:")
-                input_data = {}
+                inp = {}
                 cols = st.columns(3)
-                
-                for i, feat in enumerate(feature_cols):
+                for i, f in enumerate(fcols):
                     with cols[i % 3]:
-                        input_data[feat] = st.number_input(feat, value=float(work_df[feat].mean()),
-                                                          min_value=float(work_df[feat].min()),
-                                                          max_value=float(work_df[feat].max()))
+                        inp[f] = st.number_input(f, value=float(wdf[f].mean()), min_value=float(wdf[f].min()), max_value=float(wdf[f].max()))
                 
                 if st.button("Predict", type="secondary"):
-                    prediction = ml_model.predict(input_data)
-                    st. success(f"### 🎯 Predicted:  {prediction[0]:. 4f}")
+                    pred = ml.predict(inp)
+                    st.success(f"### 🎯 Predicted:  {pred[0]:. 4f}")
             else:
                 st.info("👆 Train a model first")
 
@@ -350,11 +224,9 @@ elif page == "ML Model":
 elif page == "Conclusion":
     st.title("📝 Conclusion")
     st.markdown("---")
-    
     st.markdown("""
-    ### 🎯 Key Achievements
-    
-    ✅ **15 EDA analyses** | ✅ **Preprocessing pipeline** | ✅ **ML models** | ✅ **Interactive predictions**
+    ### 🎯 Achievements
+    ✅ **15 EDA analyses** | ✅ **Preprocessing pipeline** | ✅ **ML models** | ✅ **Predictions**
     
     ### 🛠️ Tech Stack
     Python • Pandas • NumPy • Scikit-learn • Matplotlib • Seaborn • Streamlit
