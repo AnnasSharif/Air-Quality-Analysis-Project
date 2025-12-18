@@ -19,10 +19,20 @@ st.set_page_config(page_title="Air Quality Analysis", page_icon="🌬️", layou
 
 @st.cache_data
 def load_data():
-    for path in ['data/Air_Quality. csv', 'data/air_quality. csv', 'Air_Quality.csv']:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    possible_paths = [
+        os. path.join(current_dir, 'data', 'Air_Quality. csv'),
+        os.path.join(current_dir, 'data', 'air_quality. csv'),
+        'data/Air_Quality.csv',
+        'data/air_quality.csv',
+        'Air_Quality.csv',
+    ]
+    for path in possible_paths:
         if os.path.exists(path):
-            try:  return pd.read_csv(path)
-            except: continue
+            try:
+                return pd.read_csv(path)
+            except: 
+                continue
     st.error("❌ Could not find Air_Quality.csv")
     return None
 
@@ -234,3 +244,4 @@ elif page == "Conclusion":
     ---
     **Course:** IDS F24 | **Instructor:** Dr M Nadeem Majeed
     """)
+
