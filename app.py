@@ -366,10 +366,11 @@ elif page == "ML Model":
                 model_type = st.selectbox("Model Type", ["regression", "classification"])
             with col2:
                 test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-                if model_type == "regression":
-                    model_name = st.selectbox("Select Model", ["Random Forest Regressor", "Linear Regression"])
-                else: 
-                    model_name = st. selectbox("Select Model", ["Random Forest Classifier", "Logistic Regression"])
+               # NEW CODE
+ if model_type == "regression":
+    model_name = st. selectbox("Select Model", ["Random Forest", "Linear Regression", "Gradient Boosting"])
+else:
+    model_name = st.selectbox("Select Model", ["Random Forest", "Logistic Regression", "Gradient Boosting"])
             
             if st.button("Train Model", type="primary"):
                 feature_cols = [c for c in numeric_cols if c != target_col]
@@ -470,4 +471,5 @@ elif page == "Conclusion":
     """)
     
     st.markdown("---")
+
     st.markdown("**Course:** IDS F24 | **Instructor:** Dr M Nadeem Majeed")
