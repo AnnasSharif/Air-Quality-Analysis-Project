@@ -437,7 +437,7 @@ elif page == "ML Model":
                 
                 if st.button("Predict", type="secondary"):
                     prediction = ml_model.predict(input_data)
-                    st. success(f"### 🎯 Predicted Value: {prediction[0]:. 4f}")
+                    st. success(f"### 🎯 Predicted Value: {prediction[0]:.4f}")
             else:
                 st.info("👆 Train a model first to make predictions")
 
@@ -472,4 +472,5 @@ elif page == "Conclusion":
     st.markdown("---")
 
     st.markdown("**Course:** IDS F24 | **Instructor:** Dr M Nadeem Majeed")
+
 
