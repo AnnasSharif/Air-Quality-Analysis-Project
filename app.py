@@ -348,46 +348,45 @@ elif page == "Preprocessing":
 
 # ===================== ML MODEL =====================
 elif page == "ML Model":
-    st.title("🤖 Machine Learning Model")
+    st. title("🤖 Machine Learning Model")
     st.markdown("---")
     
     if df is not None:
-        work_df = st.session_state.get('processed_df', df. copy())
-        numeric_cols = work_df.select_dtypes(include=[np. number]).columns.tolist()
+        work_df = st.session_state. get('processed_df', df. copy())
+        numeric_cols = work_df.select_dtypes(include=[np.number]).columns.tolist()
         
         if len(numeric_cols) < 2:
             st.error("Not enough numeric columns for modeling")
         else:
             st.subheader("Model Configuration")
             
-            col1, col2 = st. columns(2)
+            col1, col2 = st.columns(2)
             with col1:
-                target_col = st.selectbox("Select Target Variable", numeric_cols)
-                model_type = st.selectbox("Model Type", ["regression", "classification"])
+                target_col = st. selectbox("Select Target Variable", numeric_cols)
+                model_type = st. selectbox("Model Type", ["regression", "classification"])
             with col2:
-                test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-               # NEW CODE
- if model_type == "regression":
-    model_name = st. selectbox("Select Model", ["Random Forest", "Linear Regression", "Gradient Boosting"])
-else:
-    model_name = st.selectbox("Select Model", ["Random Forest", "Logistic Regression", "Gradient Boosting"])
+                test_size = st. slider("Test Size", 0.1, 0.4, 0.2)
+                if model_type == "regression":
+                    model_name = st. selectbox("Select Model", ["Random Forest", "Linear Regression", "Gradient Boosting"])
+                else: 
+                    model_name = st.selectbox("Select Model", ["Random Forest", "Logistic Regression", "Gradient Boosting"])
             
-            if st.button("Train Model", type="primary"):
+            if st. button("Train Model", type="primary"):
                 feature_cols = [c for c in numeric_cols if c != target_col]
                 X = work_df[feature_cols]. dropna()
                 y = work_df. loc[X. index, target_col]
                 
                 if model_type == "classification":
-                    y = pd.cut(y, bins=3, labels=[0, 1, 2]).astype(int)
+                    y = pd. cut(y, bins=3, labels=[0, 1, 2]).astype(int)
                 
-                from sklearn.model_selection import train_test_split
+                from sklearn. model_selection import train_test_split
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
                 
                 ml_model = MLModel(model_type=model_type)
                 ml_model.train(X_train, y_train, model_name=model_name)
                 metrics, predictions = ml_model.evaluate(X_test, y_test)
                 
-                st.session_state['ml_model'] = ml_model
+                st. session_state['ml_model'] = ml_model
                 st.session_state['feature_cols'] = feature_cols
                 st.session_state['X_test'] = X_test
                 st.session_state['y_test'] = y_test
@@ -399,46 +398,46 @@ else:
                 for i, (name, value) in enumerate(metrics.items()):
                     metric_cols[i].metric(name, value)
                 
-                importance = ml_model.get_feature_importance()
-                if importance is not None:
-                    st. subheader("Feature Importance")
+                importance = ml_model. get_feature_importance()
+                if importance is not None: 
+                    st.subheader("Feature Importance")
                     fig, ax = plt.subplots(figsize=(10, 6))
                     importance.head(10).plot(kind='barh', x='Feature', y='Importance', ax=ax, color='steelblue')
                     plt.title("Top 10 Feature Importances")
-                    plt.tight_layout()
-                    st. pyplot(fig)
+                    plt. tight_layout()
+                    st.pyplot(fig)
                 
                 st.subheader("Actual vs Predicted")
                 fig, ax = plt.subplots(figsize=(10, 6))
                 ax.scatter(y_test, predictions, alpha=0.5)
                 ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
                 plt.xlabel("Actual")
-                plt. ylabel("Predicted")
+                plt.ylabel("Predicted")
                 plt.title("Actual vs Predicted Values")
-                plt.tight_layout()
+                plt. tight_layout()
                 st.pyplot(fig)
             
             st.markdown("---")
             st.subheader("🔮 Make Runtime Predictions")
             
-            if 'ml_model' in st. session_state:
-                ml_model = st.session_state['ml_model']
+            if 'ml_model' in st.session_state:
+                ml_model = st. session_state['ml_model']
                 feature_cols = st.session_state['feature_cols']
                 
-                st.write("Enter values for prediction:")
+                st. write("Enter values for prediction:")
                 
                 input_data = {}
                 cols = st.columns(3)
                 for i, feat in enumerate(feature_cols):
-                    with cols[i % 3]:
-                        min_val = float(work_df[feat].min())
+                    with cols[i % 3]: 
+                        min_val = float(work_df[feat]. min())
                         max_val = float(work_df[feat].max())
                         mean_val = float(work_df[feat].mean())
                         input_data[feat] = st.number_input(feat, min_value=min_val, max_value=max_val, value=mean_val)
                 
                 if st.button("Predict", type="secondary"):
                     prediction = ml_model.predict(input_data)
-                    st. success(f"### 🎯 Predicted Value: {prediction[0]:.4f}")
+                    st. success(f"### 🎯 Predicted Value: {prediction[0]:. 4f}")
             else:
                 st.info("👆 Train a model first to make predictions")
 
@@ -473,3 +472,4 @@ elif page == "Conclusion":
     st.markdown("---")
 
     st.markdown("**Course:** IDS F24 | **Instructor:** Dr M Nadeem Majeed")
+
